@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, basename, dirname } from "node:path";
 import { existsSync, readdirSync, statSync } from "node:fs";
 import type { NovelProject } from "./project";
 import { parseWikiLinks } from "./wikilinks";
@@ -65,10 +65,20 @@ export class StaticGraphContextBuilder implements ContextBuilder {
     return this.project.readFile(path).body;
   }
 
+  private resolveScenePath(sceneId: string): string {
+    const direct = join(this.project.root, "chapters", `${sceneId}.md`);
+    if (existsSync(direct)) return direct;
+    for (const ch of this.project.listChapters()) {
+      const cand = join(this.project.root, "chapters", ch.id, `${sceneId}.md`);
+      if (existsSync(cand)) return cand;
+    }
+    throw new Error(`scene not found: ${sceneId}`);
+  }
+
   buildForScene(sceneId: string, opts: BuildOptions = {}): ContextBundle {
-    const scenePath = join(this.project.root, "chapters", `${sceneId}.md`);
+    const scenePath = this.resolveScenePath(sceneId);
     const { data, body } = this.project.readFile(scenePath);
-    const chapterId = String(data.chapter ?? sceneId.split("/")[0]);
+    const chapterId = basename(dirname(scenePath));
     const chapPath = join(this.project.root, "chapters", chapterId, `${chapterId}.md`);
     const chap = this.project.readFile(chapPath);
 
