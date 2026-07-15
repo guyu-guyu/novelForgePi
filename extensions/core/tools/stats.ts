@@ -10,7 +10,7 @@ function ok(text: string) {
 export function registerStatsTools(pi: ExtensionAPI, getCwd: () => string) {
   const proj = () => { const p = loadProject(getCwd()); if (!p) throw new Error("不在 novelForgePi 项目中"); return p; };
 
-  pi.registerTool({ name: "novel_stats_recount_scene", label: "Recount scene", description: "Recompute a scene's word-count.", parameters: Type.Object({ sceneId: Type.String() }), async execute(_i, p, _s, _u, _c) { const pr = proj(); const path = join(pr.root, "chapters", `${p.sceneId}.md`); const body = pr.readFile(path).body; pr.patch(path, { "word-count": countWords(body) }); return ok("ok"); } });
+  pi.registerTool({ name: "novel_stats_recount_scene", label: "Recount scene", description: "Recompute a scene's word-count. Args: sceneId (bare id as returned by novel_scene_list).", parameters: Type.Object({ sceneId: Type.String() }), async execute(_i, p, _s, _u, _c) { const pr = proj(); let target: string | null = null; for (const ch of pr.listChapters()) { for (const sc of pr.listScenes(ch.id)) { if (sc.id === p.sceneId) { target = sc.path; break; } } if (target) break; } if (!target) return ok(`error: scene not found: ${p.sceneId}`); const body = pr.readFile(target).body; pr.patch(target, { "word-count": countWords(body) }); return ok("ok"); } });
 
   pi.registerTool({ name: "novel_stats_recount_book", label: "Recount book", description: "Recompute all word-counts (full reindex).", parameters: Type.Object({}), async execute(_i, _p, _s, _u, _c) { proj().reindex(); return ok("ok"); } });
 

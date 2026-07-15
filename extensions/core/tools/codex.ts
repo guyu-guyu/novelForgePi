@@ -3,7 +3,6 @@ import { Type } from "typebox";
 import { join } from "node:path";
 import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync, statSync } from "node:fs";
 import { loadProject } from "../project";
-import { parseWikiLinks } from "../wikilinks";
 
 function ok(text: string) {
   return { content: [{ type: "text" as const, text }], details: {} };
