@@ -1,4 +1,5 @@
 node_modules/
 .pi-isolated/
+.pi/
 *.log
 .DS_Store

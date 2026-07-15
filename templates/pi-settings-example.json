@@ -1,0 +1,5 @@
+{
+  "comment": "EXAMPLE ONLY — do not commit real secrets. Copy to your project's .pi/settings.json or ~/.pi/agent/settings.json to load novelForgePi. This package is referenced via its pi.extensions field in package.json; list it under packages so Pi loads the extension.",
+  "packages": ["novelforge-pi"],
+  "extensions": ["./extensions/novelforge.ts"]
+}
