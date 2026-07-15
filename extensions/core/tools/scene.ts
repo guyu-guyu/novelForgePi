@@ -98,7 +98,7 @@ export function registerSceneTools(pi: ExtensionAPI, getCwd: () => string) {
       const path = join(p.root, "chapters", `${params.sceneId}.md`);
       const f = p.readFile(path);
       const idx = f.body.indexOf(params.splitMarker);
-      if (idx < 0) return ok(JSON.stringify({ error: "marker not found" }));
+      if (idx < 0) throw new Error(`splitMarker not found in scene ${params.sceneId}`);
       const a = f.body.slice(0, idx);
       const b = f.body.slice(idx);
       p.writeBody(path, a);
