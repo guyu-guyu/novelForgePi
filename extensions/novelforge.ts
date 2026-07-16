@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, cpSync } from "node:fs";
+import { existsSync, mkdirSync, cpSync, readdirSync, symlinkSync, writeFileSync, chmodSync } from "node:fs";
 import { loadProject } from "./core/project";
 import { registerSceneTools } from "./core/tools/scene";
 import { registerChapterTools } from "./core/tools/chapter";
@@ -74,22 +74,62 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("new-book", {
-    description: "初始化一本新书骨架 + 项目隔离目录",
+    description: "初始化新书骨架（幂等）+ 隔离配置目录 + novelForgePi 包 symlink + 拷贝 isolatePi.sh",
     handler: async (_args, ctx) => {
       const root = getCwd();
-      if (existsSync(join(root, "book.md"))) { ctx.ui.notify("当前目录已有 book.md", "error"); return; }
+      const home = process.env.HOME ?? process.env.USERPROFILE ?? "~";
+      const gAgent = process.env.PI_CODING_AGENT_DIR || join(home, ".pi", "agent");
+
+      // 1. 幂等骨架：对 skeleton 里每个条目，不存在才创建（含 book.md 不覆盖）
       const skeleton = join(repoRoot, "templates", "book-skeleton");
       if (!existsSync(skeleton)) { ctx.ui.notify("骨架模板不存在（templates/book-skeleton）", "error"); return; }
-      cpSync(skeleton, root, { recursive: true });
-      const iso = join(root, ".pi", "isolated-agent-dir");
-      mkdirSync(iso, { recursive: true });
-      const home = process.env.HOME ?? process.env.USERPROFILE ?? "~";
-      const gAgent = join(home, ".pi", "agent");
-      for (const f of ["auth.json", "models.json", "settings.json"]) {
-        const src = join(gAgent, f);
-        if (existsSync(src)) cpSync(src, join(iso, f));
+      const created: string[] = [];
+      for (const entry of readdirSync(skeleton)) {
+        const dst = join(root, entry);
+        if (!existsSync(dst)) {
+          cpSync(join(skeleton, entry), dst, { recursive: true });
+          created.push(entry);
+        }
       }
-      ctx.ui.notify("新书骨架已创建", "info");
+
+      // 2. .pi-isolated/ + 冗余 .gitignore（与 isolatePi.sh 创建的相同，双保险）
+      const iso = join(root, ".pi-isolated");
+      mkdirSync(iso, { recursive: true });
+      const gi = join(iso, ".gitignore");
+      if (!existsSync(gi)) writeFileSync(gi, "*\n!.gitignore\n");
+
+      // 3. novelForgePi 包 symlink 进 .pi-isolated/git/<host>/<path>
+      //    （与 pi 的 git 包落盘规则一致，见 packages.md；symlink 保持与全局克隆天然同步）
+      const pkgSpec = "git:github.com/guyu-guyu/novelForgePi";
+      const pkgRel = "git/github.com/guyu-guyu/novelForgePi";
+      const globalPkg = join(gAgent, pkgRel);
+      const linkPath = join(iso, pkgRel);
+      if (!existsSync(globalPkg)) {
+        ctx.ui.notify(`未找到全局 novelForgePi 克隆（${globalPkg}）。请先运行：pi install ${pkgSpec}`, "error");
+        return;
+      }
+      mkdirSync(dirname(linkPath), { recursive: true });
+      if (!existsSync(linkPath)) {
+        try {
+          symlinkSync(globalPkg, linkPath, process.platform === "win32" ? "junction" : "dir");
+        } catch (e) {
+          ctx.ui.notify(`novelForgePi 包 symlink 失败：${(e as Error).message}`, "error");
+          return;
+        }
+      }
+
+      // 4. 拷贝 isolatePi.sh 到当前目录，方便用户退出 pi 后直接 ./isolatePi.sh
+      const scriptSrc = join(repoRoot, "templates", "isolatePi.sh");
+      const scriptDst = join(root, "isolatePi.sh");
+      if (existsSync(scriptSrc)) {
+        cpSync(scriptSrc, scriptDst);
+        try { chmodSync(scriptDst, 0o755); } catch {}
+      }
+
+      ctx.ui.notify(
+        `新书骨架就绪（新建：${created.join(", ") || "无"}）。退出 pi 后运行 ./isolatePi.sh 以隔离模式启动。`,
+        "info",
+      );
     },
   });
 }

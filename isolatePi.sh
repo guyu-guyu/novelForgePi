@@ -18,29 +18,39 @@ cat > "$ISOLATED_DIR/.gitignore" <<'EOF'
 !.gitignore
 EOF
 
-# 只复制模型/Provider 接入所必需的文件：
+# 只处理模型/Provider 接入所必需的文件：
 #   - auth.json     ：API key 和 OAuth 凭证
 #   - settings.json ：defaultProvider / defaultModel / httpProxy 等
 #   - models.json   ：自定义 provider/model（可选）
-# 其余（extensions、skills、sessions、trust、mcp 缓存、tools.json、
-# packages/skills 列表等）一律不复制，保持项目运行时的隔离状态。
+# 其余（extensions、skills、sessions、trust、mcp 缓存、tools.json 等）一律
+# 不处理，保持项目运行时的隔离状态。
 #
-# 注意：settings.json 不做整体复制，因为其中的 packages/skills 路径会把
-# 全局资源重新引进来。下面只挑出模型相关的字段。
+# 安全设计：auth.json / models.json 用 symlink 而非 cp —— 即使误操作将
+# .pi-isolated/ 上传提交，symlink 也只是指针，不含真实数据，不会泄露凭证。
+#
+# 隔离设计：settings.json 仍过滤为真实文件（无密钥，可安全提交），且
+# packages 字段只保留 novelForgePi —— 避免把全局的 9 个包全部带进来，破坏
+# 项目级隔离。
 
-# 1) auth.json —— 整体复制（内容仅为 API 凭证）。
+# 1) auth.json —— symlink（不再 cp，误提交也不泄露凭证）。
+#    注意：Git Bash 的 `ln -s` 在 Windows 上会创建副本而非真 symlink，
+#    所以这里用 node 的 fs.symlinkSync（本机开发者模式已开，可用）。
 if [[ -f "$GLOBAL_AGENT_DIR/auth.json" ]]; then
-    cp "$GLOBAL_AGENT_DIR/auth.json" "$ISOLATED_DIR/auth.json"
+    rm -f "$ISOLATED_DIR/auth.json"
+    node -e 'const fs=require("fs");fs.symlinkSync(process.argv[1],process.argv[2],"file")' \
+        "$GLOBAL_AGENT_DIR/auth.json" "$ISOLATED_DIR/auth.json"
     chmod 600 "$ISOLATED_DIR/auth.json" 2>/dev/null || true
 fi
 
-# 2) models.json —— 整体复制（仅为自定义 provider/model 定义）。
+# 2) models.json —— symlink。
 if [[ -f "$GLOBAL_AGENT_DIR/models.json" ]]; then
-    cp "$GLOBAL_AGENT_DIR/models.json" "$ISOLATED_DIR/models.json"
+    rm -f "$ISOLATED_DIR/models.json"
+    node -e 'const fs=require("fs");fs.symlinkSync(process.argv[1],process.argv[2],"file")' \
+        "$GLOBAL_AGENT_DIR/models.json" "$ISOLATED_DIR/models.json"
 fi
 
-# 3) settings.json —— 只提取模型相关字段，避免把全局的
-#    packages/skills/extensions 引用一起带进来。
+# 3) settings.json —— 仍过滤为真实文件，但注入 packages: [novelForgePi]，
+#    保证隔离模式下只加载 novelForgePi 这一个包。
 if [[ -f "$GLOBAL_AGENT_DIR/settings.json" ]]; then
     node -e '
         const fs = require("fs");
@@ -57,6 +67,7 @@ if [[ -f "$GLOBAL_AGENT_DIR/settings.json" ]]; then
         ];
         const out = {};
         for (const k of keep) if (k in src) out[k] = src[k];
+        out.packages = ["git:github.com/guyu-guyu/novelForgePi"];
         fs.writeFileSync(process.argv[2], JSON.stringify(out, null, 2));
     ' "$GLOBAL_AGENT_DIR/settings.json" "$ISOLATED_DIR/settings.json"
 fi
