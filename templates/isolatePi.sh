@@ -49,9 +49,12 @@ if [[ -f "$GLOBAL_AGENT_DIR/models.json" ]]; then
         "$GLOBAL_AGENT_DIR/models.json" "$ISOLATED_DIR/models.json"
 fi
 
-# 3) settings.json —— 仍过滤为真实文件，但注入 packages: [novelForgePi]，
-#    保证隔离模式下只加载 novelForgePi 这一个包。
-if [[ -f "$GLOBAL_AGENT_DIR/settings.json" ]]; then
+# 3) settings.json —— 首次初始化：若 .pi-isolated/settings.json 已存在则跳过，
+#    不覆盖（保留用户在隔离模式下用 pi config 等方式做的修改）。
+#    不存在时从全局过滤复制，只保留 provider/model 等基础字段；
+#    不注入 packages（包加载交给 /new-book 的 novelForgePi 包 symlink，
+#    或用户自行配置）。
+if [[ ! -f "$ISOLATED_DIR/settings.json" && -f "$GLOBAL_AGENT_DIR/settings.json" ]]; then
     node -e '
         const fs = require("fs");
         const src = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
@@ -67,7 +70,6 @@ if [[ -f "$GLOBAL_AGENT_DIR/settings.json" ]]; then
         ];
         const out = {};
         for (const k of keep) if (k in src) out[k] = src[k];
-        out.packages = ["git:github.com/guyu-guyu/novelForgePi"];
         fs.writeFileSync(process.argv[2], JSON.stringify(out, null, 2));
     ' "$GLOBAL_AGENT_DIR/settings.json" "$ISOLATED_DIR/settings.json"
 fi
