@@ -1,7 +1,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync, mkdirSync, cpSync, readdirSync, symlinkSync, writeFileSync, chmodSync } from "node:fs";
+import { existsSync, mkdirSync, cpSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { loadProject } from "./core/project";
 import { registerSceneTools } from "./core/tools/scene";
 import { registerChapterTools } from "./core/tools/chapter";
@@ -81,7 +82,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.registerCommand("new-book", {
-    description: "初始化新书骨架（幂等）+ 隔离配置目录 + novelForgePi 包 symlink + 拷贝 isolatePi.sh",
+    description: "初始化新书骨架（幂等）+ 隔离配置目录 + novelForgePi 包 symlink",
     handler: async (_args, ctx) => {
       const root = getCwd();
       const home = process.env.HOME ?? process.env.USERPROFILE ?? "~";
@@ -99,7 +100,7 @@ export default function (pi: ExtensionAPI) {
         }
       }
 
-      // 2. .pi-isolated/ + 冗余 .gitignore（与 isolatePi.sh 创建的相同，双保险）
+      // 2. .pi-isolated/ + 冗余 .gitignore（与 pi-isolate 创建的相同，双保险）
       const iso = join(root, ".pi-isolated");
       mkdirSync(iso, { recursive: true });
       const gi = join(iso, ".gitignore");
@@ -125,18 +126,27 @@ export default function (pi: ExtensionAPI) {
         }
       }
 
-      // 4. 拷贝 isolatePi.sh 到当前目录，方便用户退出 pi 后直接 ./isolatePi.sh
-      const scriptSrc = join(repoRoot, "templates", "isolatePi.sh");
-      const scriptDst = join(root, "isolatePi.sh");
-      if (existsSync(scriptSrc)) {
-        cpSync(scriptSrc, scriptDst);
-        try { chmodSync(scriptDst, 0o755); } catch {}
-      }
-
       ctx.ui.notify(
-        `新书骨架就绪（新建：${created.join(", ") || "无"}）。退出 pi 后运行 ./isolatePi.sh 以隔离模式启动。`,
+        `新书骨架就绪（新建：${created.join(", ") || "无"}）。退出 pi 后运行 pi-isolate 以隔离模式启动。`,
         "info",
       );
+    },
+  });
+
+  pi.registerCommand("install-isolate", {
+    description: "全局安装 pi-isolate（npm 包，提供 pi-isolate 命令）",
+    handler: async (_args, ctx) => {
+      const pkgSpec = "github:guyu-guyu/pi-isolate";
+      ctx.ui.notify(`正在安装 ${pkgSpec}（全局）...`, "info");
+      const result = spawnSync("npm", ["install", "-g", pkgSpec], {
+        stdio: "inherit",
+        shell: process.platform === "win32",
+      });
+      if (result.status === 0) {
+        ctx.ui.notify("pi-isolate 已安装。任意目录运行 pi-isolate 即可以隔离模式启动 pi。", "info");
+      } else {
+        ctx.ui.notify(`安装失败（exit ${result.status}）。可手动运行：npm install -g ${pkgSpec}`, "error");
+      }
     },
   });
 }

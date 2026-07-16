@@ -5,7 +5,13 @@
 ## 安装
 
 ```bash
+# 1. 安装 novelForgePi 扩展
 pi install git:github.com/guyu-guyu/novelForgePi
+
+# 2. 安装 pi-isolate（隔离启动工具，提供 pi-isolate 命令）
+#    方式 A：在 pi 里运行 /install-isolate（自动）
+#    方式 B：手动安装
+npm install -g github:guyu-guyu/pi-isolate
 ```
 
 ## 快速开始
@@ -13,9 +19,9 @@ pi install git:github.com/guyu-guyu/novelForgePi
 ```bash
 mkdir my-novel && cd my-novel
 pi
-> /new-book          # 初始化骨架 + 隔离配置
+> /new-book          # 初始化骨架 + 隔离配置 + novelForgePi 包 symlink
 > /quit              # 退出 pi
-./isolatePi.sh        # 以隔离模式重启 pi（推荐）
+pi-isolate           # 以隔离模式重启 pi（推荐）
 > /outline           # 规划大纲
 > /new-chapter       # 新建章
 > /new-scene         # 新建场景
