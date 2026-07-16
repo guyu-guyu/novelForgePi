@@ -23,4 +23,15 @@ describe("frontmatter", () => {
     expect(s).toContain("type: scene");
     expect(parseFrontmatter(s).body.trim()).toBe("hi");
   });
+
+  it("parses CRLF line endings (Windows autocrlf)", () => {
+    // Windows 默认 core.autocrlf=true 会把 checkout 的 LF 模板转成 CRLF。
+    // frontmatter 正则必须同时认 LF 和 CRLF，否则 data 返回空 → findBookRoot 失败。
+    const raw = "---\r\ntype: book\r\ntitle: 未命名\r\ngenre-pack: cn-webnovel\r\n---\r\n# 未命名\r\n";
+    const { data, body } = parseFrontmatter(raw);
+    expect(data.type).toBe("book");
+    expect(data.title).toBe("未命名");
+    expect(data["genre-pack"]).toBe("cn-webnovel");
+    expect(body.trim()).toBe("# 未命名");
+  });
 });

@@ -6,7 +6,9 @@ export interface ParsedFile {
 }
 
 export function parseFrontmatter(raw: string): ParsedFile {
-  const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  // 兼容 LF / CRLF / 混合行尾。`\r?\n` 让 frontmatter 边界匹配 CRLF，
+  // 内部 YAML 由 yaml 库解析（它本身容忍 CRLF）。
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
   if (!match) return { data: {}, body: raw };
   let data: Record<string, unknown> = {};
   try {
