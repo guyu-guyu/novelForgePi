@@ -17,7 +17,7 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
 function renderPanel(root: string): string[] {
   const p = loadProject(root);
-  if (!p) return ["novelForgePi: 当前目录不是 novelForgePi 项目"];
+  if (!p) return [];
   const book = p.readFile(join(root, "book.md")).data;
   const focus = state.focusSceneId ?? "(无)";
   return [
@@ -42,7 +42,9 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_e, ctx) => {
     const root = getCwd();
     const p = loadProject(root);
-    if (!p) { ctx.ui.setWidget("novelforge", renderPanel(root)); return; }
+    // 非项目目录：启动时不显示任何 novelForgePi 面板/提示。
+    // 仅当用户实际调用 novelForgePi 命令时才检查并提示。
+    if (!p) return;
     state = loadState(root);
     ctx.ui.setWidget("novelforge", renderPanel(root));
     ctx.ui.notify("novelForgePi 已加载", "info");
@@ -68,7 +70,12 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("status", {
     description: "刷新 novelForgePi 状态面板",
     handler: async (_args, ctx) => {
-      ctx.ui.setWidget("novelforge", renderPanel(getCwd()));
+      const root = getCwd();
+      if (!loadProject(root)) {
+        ctx.ui.notify("当前目录不是 novelForgePi 项目（找不到 type: book 的 book.md）", "error");
+        return;
+      }
+      ctx.ui.setWidget("novelforge", renderPanel(root));
       ctx.ui.notify("已刷新", "info");
     },
   });
