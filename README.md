@@ -5,13 +5,7 @@
 ## 安装
 
 ```bash
-# 1. 安装 novelForgePi 扩展
 pi install git:github.com/guyu-guyu/novelForgePi
-
-# 2. 安装 pi-isolate（隔离启动工具，提供 pi-isolate 命令）
-#    方式 A：在 pi 里运行 /install-isolate（自动）
-#    方式 B：手动安装
-npm install -g github:guyu-guyu/pi-isolate
 ```
 
 ## 快速开始
@@ -19,9 +13,7 @@ npm install -g github:guyu-guyu/pi-isolate
 ```bash
 mkdir my-novel && cd my-novel
 pi
-> /new-book          # 初始化骨架 + 隔离配置 + novelForgePi 包 symlink
-> /quit              # 退出 pi
-pi-isolate           # 以隔离模式重启 pi（推荐）
+> /new-book          # 初始化骨架
 > /outline           # 规划大纲
 > /new-chapter       # 新建章
 > /new-scene         # 新建场景
@@ -43,7 +35,6 @@ pi-isolate           # 以隔离模式重启 pi（推荐）
 - **19 个斜杠命令**模板
 - **内置 cn-webnovel 题材包**（风格总纲 + 续写/润色指令 + 一致性规则 + 示例片段）
 - **Obsidian 兼容**：YAML frontmatter + `[[wiki-links]]` + 全局唯一文件名
-- **隔离模式**：配置隔离 + symlink 防泄露 + 只加载 novelForgePi 包
 - **16 个测试**（单元 + 集成）通过
 
 ## 许可

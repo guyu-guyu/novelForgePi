@@ -78,11 +78,9 @@ prompts/           # 19 个斜杠命令模板 (.md)
 genre-packs/cn-webnovel/  # 题材包：pack.json + 4 个 md + 3 个 snippets
 templates/
   book-skeleton/   # /new-book 用的骨架模板（book.md + 4 个空目录 + outline/main.md）
-  isolatePi.sh     # 隔离脚本副本
   pi-settings-example.json
 fixtures/sample-novel/  # 集成测试用的小型 webnovel（2 章 5 场景 3 角色 9 codex）
 tests/             # 5 个测试文件，16 个用例
-isolatePi.sh       # 隔离启动脚本（根）
 ```
 
 各部分职责：
@@ -220,9 +218,6 @@ export default function (pi: ExtensionAPI) {
 **`/new-book`** — 初始化新书。**��外**：这是唯一不做项目检查的命令（用途就是初始化非项目目录）。步骤：
 
 1. **幂等骨架**：遍历 `templates/book-skeleton/` 每个条目，目标不存在才 `cpSync`（含 `book.md` 不覆盖）。
-2. **`.pi-isolated/` + 冗余 `.gitignore`**：创建隔离目录，写入 `*\n!.gitignore\n`（与 `isolatePi.sh` 双保险）。
-3. **novelForgePi 包 junction**：把全局克隆（`~/.pi/agent/git/github.com/guyu-guyu/novelForgePi`）以 symlink/junction 形式链接进 `.pi-isolated/git/...`，保持与全局克隆天然同步。找不到全局克隆则报错并提示 `pi install` 命令。
-4. **拷贝 `isolatePi.sh`** 到当前目录并 `chmod 0755`，方便用户退出 Pi 后直接 `./isolatePi.sh`。
 
 ### widget 渲染
 

@@ -14,51 +14,13 @@ pi install git:github.com/guyu-guyu/novelForgePi
 
 ## 2. 开新书
 
-开新书有两种方式：**非隔离模式**（简单）和**隔离模式**（推荐）。
-
-### 方式 A：非隔离模式（简单，共享全局配置）
-
 ```bash
 mkdir my-novel && cd my-novel
 pi
 > /new-book
 ```
 
-`/new-book` 会帮你做好这些事：
-
-- 建好书的骨架目录：`book.md`（书元数据）、`outline/`（大纲）、`chapters/`（章节）、`characters/`（角色）、`codex/`（世界观）
-- 建一个 `.pi-isolated/` 目录，准备隔离模式要用到的配置
-- 把全局的 novelForgePi 包以 symlink 方式链进来
-- 拷贝一份 `isolatePi.sh` 脚本到当前目录，方便之后切换到隔离模式
-
-这种方式直接用你全局的 pi 配置，所有已安装的包都会一起加载。**适合快速试用**。
-
-### 方式 B：隔离模式（推荐：配置隔离 + 安全）
-
-两步：
-
-1. 先按方式 A 跑一次 `/new-book`：
-   ```bash
-   mkdir my-novel && cd my-novel
-   pi
-   > /new-book
-   ```
-
-2. 退出 pi（按 `Ctrl-C` 或输入 `/quit`），然后运行：
-   ```bash
-   ./isolatePi.sh
-   ```
-
-这会以**隔离模式**重新启动 pi。推荐用这种方式，原因如下：
-
-- **配置隔离**：只加载 novelForgePi 这一个包，不带全局里其他包，避免互相干扰。
-- **安全**：
-  - `auth.json`、`models.json` 是 symlink（软链接），即使你不小心把它们提交到 git，也只是一个指针，不会泄露真实的 API key。
-  - `settings.json` 是一份过滤后的真实文件，只保留模型相关字段，不含任何密钥。
-  - `.pi-isolated/` 目录里还有 `.gitignore` 双保险，默认忽略全部内容。
-- **天然同步**：novelForgePi 包是 symlink 指向全局克隆，全局 `pi install` 更新后，项目里自动拿到最新版。
-
-> 隔离模式下，每次启动都用 `./isolatePi.sh` 代替直接 `pi`。
+`/new-book` 会帮你建好书的骨架目录：`book.md`（书元数据）、`outline/`（大纲）、`chapters/`（章节）、`characters/`（角色）、`codex/`（世界观）。
 
 ## 3. 写作工作流
 
@@ -189,7 +151,7 @@ pi
 > /reindex
 ```
 
-如果你��� Obsidian 或别的编辑器里手动改了正文，跑一次 `/reindex` 重算全书字数、场景数、章字数等统计字段。
+如果你在 Obsidian 或别的编辑器里手动改了正文，跑一次 `/reindex` 重算全书字数、场景数、章字数等统计字段。
 
 ## 4. 数据文件结构
 
@@ -305,19 +267,6 @@ genre: cn-webnovel
 ### CRLF 行尾问题（Windows）
 
 Windows 下 git 默认 `core.autocrlf=true`，会把模板文件转成 CRLF 行尾。novelForgePi 的 frontmatter 解析已兼容 CRLF，不影响使用。如果你在 Obsidian 里手动建文件遇到解析问题，确认一下文件是不是 UTF-8 编码。
-
-### 隔离模式启动失败
-
-检查全局目录 `~/.pi/agent/git/github.com/guyu-guyu/novelForgePi/` 是否存在。如果不存在，说明还没安装包，先跑：
-
-```bash
-pi install git:github.com/guyu-guyu/novelForgePi
-```
-
-### 改了全局配置后，隔离模式没更新
-
-- `auth.json`、`models.json` 是 symlink，全局改了立刻生效，不用重跑。
-- `settings.json` 是过滤后的真实文件，全局改了不会自动同步。重跑一次 `./isolatePi.sh` 即可重新生成。
 
 ### 在 Obsidian 里改了正文，字数对不上
 
